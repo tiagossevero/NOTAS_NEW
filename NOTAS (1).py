@@ -115,6 +115,12 @@ def limpar_cnpj(cnpj: str) -> str:
         return re.sub(r'[^0-9]', '', str(cnpj))
     return ""
 
+def limpar_ie(ie: str) -> str:
+    """Remove formatação da Inscrição Estadual (pontos, hífens, etc.)."""
+    if ie:
+        return re.sub(r'[^0-9]', '', str(ie))
+    return ""
+
 def formatar_cnpj(cnpj: str) -> str:
     """Formata CNPJ para exibição."""
     cnpj = limpar_cnpj(cnpj)
@@ -123,11 +129,11 @@ def formatar_cnpj(cnpj: str) -> str:
     return cnpj
 
 def formatar_ie(ie: str) -> str:
-    """Formata IE para exibição."""
+    """Formata IE para exibição no formato XX.XXX.XXX-X."""
     if ie:
-        ie = str(ie).strip()
+        ie = limpar_ie(ie)
         if len(ie) == 9:
-            return f"{ie[:3]}.{ie[3:6]}.{ie[6:9]}"
+            return f"{ie[:2]}.{ie[2:5]}.{ie[5:8]}-{ie[8]}"
     return ie or "-"
 
 def formatar_moeda(valor: float) -> str:
@@ -987,17 +993,29 @@ def calcular_variacao(atual: float, anterior: float) -> Tuple[float, str]:
 # FUNÇÕES DE RENDERIZAÇÃO
 # =============================================================================
 
+def obter_cor_situacao_cadastral(situacao: str) -> str:
+    """Retorna a cor de fundo baseada na situação cadastral."""
+    situacao_upper = situacao.upper() if situacao else ''
+    if situacao_upper == 'ATIVA':
+        return "#28a745"  # Verde
+    elif situacao_upper in ('CANCELADA', 'BAIXA REQUERIDA'):
+        return "#dc3545"  # Vermelho
+    elif situacao_upper == 'BAIXA DEFERIDA':
+        return "#ffc107"  # Amarelo
+    else:
+        return "#6c757d"  # Cinza (normal)
+
 def render_header(cadastro: Dict):
     """Renderiza cabeçalho com dados da empresa."""
     situacao = cadastro.get('situacao_cadastral_desc', 'N/A')
-    cor_situacao = "#28a745" if situacao == "ATIVO" else "#dc3545"
-    
+    cor_situacao = obter_cor_situacao_cadastral(situacao)
+
     st.markdown(f"""
-    <div style='background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+    <div style='background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
                 padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;'>
         <h2 style='margin: 0;'>📄 {cadastro.get('razao_social', 'N/A')}</h2>
         <p style='margin: 5px 0; opacity: 0.9;'>
-            <strong>CNPJ:</strong> {formatar_cnpj(cadastro.get('cnpj', ''))} | 
+            <strong>CNPJ:</strong> {formatar_cnpj(cadastro.get('cnpj', ''))} |
             <strong>IE:</strong> {formatar_ie(cadastro.get('inscricao_estadual', ''))} |
             <span style='background-color: {cor_situacao}; padding: 2px 8px; border-radius: 3px;'>{situacao}</span>
         </p>
@@ -1057,15 +1075,19 @@ def render_tab_cadastro(cadastro: Dict):
             ("Nome Fantasia", cadastro.get('nome_fantasia', '-') or '-'),
             ("CNPJ", formatar_cnpj(cadastro.get('cnpj', ''))),
             ("Inscrição Estadual", formatar_ie(cadastro.get('inscricao_estadual', ''))),
-            ("Situação Cadastral", cadastro.get('situacao_cadastral_desc', '-')),
             ("Data Situação", str(cadastro.get('data_situacao_cadastral', '-'))),
             ("Natureza Jurídica", cadastro.get('natureza_juridica', '-')),
             ("Data Constituição", str(cadastro.get('data_constituicao', '-'))),
             ("Data Início ICMS", str(cadastro.get('data_inicio_icms', '-'))),
         ]
-        
+
         for label, valor in dados:
             st.markdown(f"**{label}:** {valor}")
+
+        # Situação cadastral com cor de fundo
+        situacao = cadastro.get('situacao_cadastral_desc', '-')
+        cor_situacao = obter_cor_situacao_cadastral(situacao)
+        st.markdown(f"**Situação Cadastral:** <span style='background-color: {cor_situacao}; color: white; padding: 2px 8px; border-radius: 3px;'>{situacao}</span>", unsafe_allow_html=True)
     
     with col2:
         st.markdown("### 📍 Localização e Contato")
@@ -2962,7 +2984,7 @@ def main():
     # Conteúdo principal
     if buscar:
         cnpj = limpar_cnpj(cnpj_input) if cnpj_input else None
-        ie = ie_input.strip() if ie_input else None
+        ie = limpar_ie(ie_input) if ie_input else None
         
         if not cnpj and not ie:
             st.error("❌ Informe um CNPJ ou Inscrição Estadual.")
@@ -2976,7 +2998,7 @@ def main():
     # Se está no meio de uma busca, executar
     if st.session_state.get('buscando', False):
         cnpj = limpar_cnpj(cnpj_input) if cnpj_input else None
-        ie = ie_input.strip() if ie_input else None
+        ie = limpar_ie(ie_input) if ie_input else None
         
         dados = buscar_dados_empresa_com_progresso(cnpj=cnpj, ie=ie, periodo_inicio=periodo_inicio, periodo_fim=periodo_fim)
         
