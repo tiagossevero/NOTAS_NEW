@@ -43,6 +43,22 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# CSS para reduzir espaço no topo da página
+st.markdown("""
+<style>
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 0rem;
+    }
+    header[data-testid="stHeader"] {
+        height: 0;
+    }
+    .stMainBlockContainer {
+        padding-top: 1rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # =============================================================================
 # CONFIGURAÇÃO DO BANCO DE DADOS
 # =============================================================================
@@ -1010,21 +1026,21 @@ def render_header(cadastro: Dict):
     """Renderiza cabeçalho com dados da empresa."""
     situacao = cadastro.get('situacao_cadastral_desc', 'N/A')
     cor_situacao = obter_cor_situacao_cadastral(situacao)
+    cnae_desc = cadastro.get('descricao_cnae', 'N/A') or 'N/A'
+    cnae_desc_curto = cnae_desc[:40] + '...' if len(cnae_desc) > 40 else cnae_desc
 
     st.markdown(f"""
     <div style='background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-                padding: 20px; border-radius: 10px; margin-bottom: 20px; color: white;'>
-        <h2 style='margin: 0;'>📄 {cadastro.get('razao_social', 'N/A')}</h2>
-        <p style='margin: 5px 0; opacity: 0.9;'>
+                padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; color: white;'>
+        <h3 style='margin: 0 0 5px 0; font-size: 1.2em;'>📄 {cadastro.get('razao_social', 'N/A')}</h3>
+        <p style='margin: 2px 0; opacity: 0.9; font-size: 0.9em;'>
             <strong>CNPJ:</strong> {formatar_cnpj(cadastro.get('cnpj', ''))} |
             <strong>IE:</strong> {formatar_ie(cadastro.get('inscricao_estadual', ''))} |
-            <span style='background-color: {cor_situacao}; padding: 2px 8px; border-radius: 3px;'>{situacao}</span>
+            <span style='background-color: {cor_situacao}; padding: 1px 6px; border-radius: 3px;'>{situacao}</span>
         </p>
-        <p style='margin: 5px 0; opacity: 0.8;'>
-            <strong>CNAE:</strong> {cadastro.get('cnae', 'N/A')} - {cadastro.get('descricao_cnae', 'N/A')[:60]}...
-        </p>
-        <p style='margin: 5px 0; opacity: 0.8;'>
-            <strong>Regime:</strong> {cadastro.get('regime_apuracao_desc', 'N/A')} | 
+        <p style='margin: 2px 0; opacity: 0.8; font-size: 0.85em;'>
+            <strong>CNAE:</strong> {cadastro.get('cnae', 'N/A')} - {cnae_desc_curto} |
+            <strong>Regime:</strong> {cadastro.get('regime_apuracao_desc', 'N/A')} |
             <strong>Município:</strong> {cadastro.get('municipio', 'N/A')}/{cadastro.get('uf', 'SC')}
         </p>
     </div>
@@ -2101,11 +2117,11 @@ def render_tab_setor(dados: Dict, cadastro: Dict):
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            mediana = stats.get('mediana_faturamento', 0)
-            media = stats.get('media_faturamento', 0)
-            minimo = stats.get('min_faturamento', 0)
-            maximo = stats.get('max_faturamento', 0)
-            
+            mediana = stats.get('mediana_faturamento') or 0
+            media = stats.get('media_faturamento') or 0
+            minimo = stats.get('min_faturamento') or 0
+            maximo = stats.get('max_faturamento') or 0
+
             if maximo > minimo:
                 percentil_aprox = ((faturamento_empresa - minimo) / (maximo - minimo)) * 100
             else:
