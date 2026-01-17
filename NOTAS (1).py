@@ -207,10 +207,10 @@ def col_barra_pct(label: str, help_text: str = None):
     )
 
 def calcular_periodo_default() -> Tuple[int, int]:
-    """Retorna período padrão: últimos 12 meses."""
+    """Retorna período padrão: últimos 6 meses."""
     hoje = date.today()
     fim = hoje.year * 100 + hoje.month
-    inicio_data = hoje - relativedelta(months=11)
+    inicio_data = hoje - relativedelta(months=5)
     inicio = inicio_data.year * 100 + inicio_data.month
     return inicio, fim
 
@@ -2924,14 +2924,23 @@ def main():
         st.markdown("### 📅 Período de Análise")
         
         periodo_inicio_default, periodo_fim_default = calcular_periodo_default()
-        
+
+        # Extrair ano e mês dos valores padrão
+        ano_inicio_default = periodo_inicio_default // 100
+        mes_inicio_default = periodo_inicio_default % 100
+        ano_fim_default = periodo_fim_default // 100
+        mes_fim_default = periodo_fim_default % 100
+
+        # Lista de anos disponíveis (dinâmica baseada no período)
+        anos_disponiveis = sorted(set([ano_inicio_default, ano_fim_default, 2024, 2025, datetime.now().year]))
+
         col1, col2 = st.columns(2)
         with col1:
-            ano_inicio = st.selectbox("Ano Início:", [2024, 2025], index=1)
-            mes_inicio = st.selectbox("Mês Início:", range(1, 13), index=0)
+            ano_inicio = st.selectbox("Ano Início:", anos_disponiveis, index=anos_disponiveis.index(ano_inicio_default))
+            mes_inicio = st.selectbox("Mês Início:", range(1, 13), index=mes_inicio_default - 1)
         with col2:
-            ano_fim = st.selectbox("Ano Fim:", [2024, 2025], index=1)
-            mes_fim = st.selectbox("Mês Fim:", range(1, 13), index=datetime.now().month - 1)
+            ano_fim = st.selectbox("Ano Fim:", anos_disponiveis, index=anos_disponiveis.index(ano_fim_default))
+            mes_fim = st.selectbox("Mês Fim:", range(1, 13), index=mes_fim_default - 1)
         
         periodo_inicio = ano_inicio * 100 + mes_inicio
         periodo_fim = ano_fim * 100 + mes_fim
