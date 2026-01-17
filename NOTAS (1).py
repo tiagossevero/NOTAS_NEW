@@ -23,6 +23,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+import time
 
 # Configurações SSL
 try:
@@ -2748,16 +2749,49 @@ def buscar_dados_empresa_com_progresso(cnpj: str = None, ie: str = None, periodo
             """, unsafe_allow_html=True)
             
             progress_bar = st.progress(0)
-            status_text = st.empty()
-            
+            tempo_text = st.empty()
+
             total_etapas = 17
             etapa_atual = 0
-            
+            tempo_inicio = time.time()
+            tempo_etapa_inicio = time.time()
+            tempos_etapas = []
+
             def atualizar_progresso(mensagem: str):
-                nonlocal etapa_atual
+                nonlocal etapa_atual, tempo_etapa_inicio
+
+                # Calcular tempo da etapa anterior
+                if etapa_atual > 0:
+                    tempo_etapa = time.time() - tempo_etapa_inicio
+                    tempos_etapas.append(tempo_etapa)
+
                 etapa_atual += 1
-                progress_bar.progress(etapa_atual / total_etapas)
-                status_text.markdown(f"<p style='text-align: center; color: #666;'>{mensagem}</p>", unsafe_allow_html=True)
+                tempo_etapa_inicio = time.time()
+
+                # Calcular porcentagem
+                pct = int((etapa_atual / total_etapas) * 100)
+
+                # Calcular tempo decorrido
+                tempo_decorrido = int(time.time() - tempo_inicio)
+
+                # Estimar tempo restante (média simples)
+                if tempos_etapas:
+                    tempo_medio = sum(tempos_etapas) / len(tempos_etapas)
+                    etapas_restantes = total_etapas - etapa_atual
+                    tempo_restante = int(tempo_medio * etapas_restantes)
+
+                    if tempo_restante >= 60:
+                        tempo_restante_texto = f"~{tempo_restante // 60}min {tempo_restante % 60}s"
+                    else:
+                        tempo_restante_texto = f"~{tempo_restante}s"
+
+                    tempo_texto = f"⏱️ {tempo_decorrido}s decorridos | {tempo_restante_texto} restantes"
+                else:
+                    tempo_texto = "⏱️ Calculando tempo..."
+
+                # Atualizar UI
+                progress_bar.progress(pct / 100, text=f"{mensagem} ({pct}%)")
+                tempo_text.markdown(f"<p style='text-align: center; color: #666;'>{tempo_texto}</p>", unsafe_allow_html=True)
             
             # Etapa 1: Cadastro
             atualizar_progresso("📋 Buscando dados cadastrais...")
